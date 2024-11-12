@@ -17,6 +17,15 @@ public:
 
 private:
     Ui::MainWindow *ui;
+public slots:
+    void on_pushButton_ajouter_clicked();
+    void on_pushButton_modifier_clicked();
+    void on_pushButton_afficher_clicked();
+    void on_pushButton_supprimer_clicked();
+    void on_pushButton_recherche_clicked();
+    void on_pushButton_trier_clicked();
+    void on_pushButton_exportpdf_clicked();
+
 };
 
 #endif // MAINWINDOW_H
