@@ -6,6 +6,7 @@
 #include <QSqlQueryModel>
 #include <iostream>
 #include <QDate>
+#include <QFile>
 
 using namespace std;
 
@@ -15,18 +16,17 @@ class Prescription {
     QString Nom_patient;
     QString Nom_medecin;
     QString Medicament;
-    QDate Date_Creation;
     QString Statut_prescription;
-    QString Duree_traitement;
+    int Duree_traitement;
     QString Dosage;
-    QString Frequence;
+    int Frequence;
     QString Note;
 
 public:
     //constructeur
     Prescription(int id, QDate datePrescrip, QString nomPatient, QString nomMedecin,
-                 QString medicament, QDate dateCreation, QString statutPrescrip,
-                 QString dureeTraitement, QString dosage, QString frequence, QString note);
+                 QString medicament, QString statutPrescrip,
+                 int dureeTraitement, QString dosage, int frequence, QString note);
     Prescription(){return ;}
 
     //getters
@@ -35,34 +35,38 @@ public:
     QString getNom_Patient(){return this->Nom_patient;}
     QString getNom_Medecin(){return this->Nom_medecin;}
     QString getMedicament(){return this->Medicament;}
-    QDate getDate_Creation(){return this->Date_Creation;}
     QString getStatut(){return this->Statut_prescription;}
-    QString getDuree_traitement(){return this->Duree_traitement;}
+    int getDuree_traitement(){return this->Duree_traitement;}
     QString getDosage(){return this->Dosage;}
-    QString getFrequence(){return this->Frequence;}
+    int getFrequence(){return this->Frequence;}
     QString getNote(){return this->Note;}
 
 
     //setters
     void setID(int id){this->ID_prescription=id;}
-    void setDate_Prescription(QDate date_prescription){this->Date_Creation=date_prescription;}
+    void setDate_Prescription(QDate date_prescription){this->Date_prescription=date_prescription;}
     void setNom_Patient(QString nom){this->Nom_patient=nom;}
     void setNom_Medecin (QString nom){this->Nom_medecin= nom;}
     void setMedicament (QString medicament){this->Medicament=medicament;}
-    void setDate_Creation(QDate date_creation){this->Date_Creation=date_creation;}
     void setStatut(QString statut){this->Statut_prescription=statut;}
-    void setDuree_traitement(QString duree){this->Duree_traitement=duree;}
+    void setDuree_traitement(int duree){this->Duree_traitement=duree;}
     void setDosage(QString dosage){this->Dosage=dosage;}
-    void setFrequence (QString frequence){this->Frequence=frequence;}
+    void setFrequence (int frequence){this->Frequence=frequence;}
     void setNote(QString note){this->Note=note;}
 
 
 
 
 
- QSqlQueryModel * affiche(int id);
+static QSqlQueryModel * afficher();
+static bool ajouter (Prescription pres);
 static bool supprimer(int id);
-static bool modifier (int ID,QString champ,QString nouvelle_valeure);
+static bool modifier ();
+static QSqlQueryModel* trier_nom();
+static bool genereText();
+
+
+
 
 
 };

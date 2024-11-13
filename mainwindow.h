@@ -10,17 +10,21 @@ class MainWindow;  // Forward declaration for UI class
 }
 
 class MainWindow : public QMainWindow {
-    Q_OBJECT
+    Q_OBJECT;
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 private slots:
-    void openPrescriptionCreation();
-    void on_rechercheButton_clicked();
-    void on_supprimerclicked();
-    void on_modifierclicked();
+    void BasculerTabAjout();
+    void on_enregistrerButton_clicked();
+    void on_supprimer_clicked();
+    void enregistrer (Prescription * temp);
+    void on_recherche_clicked();
+    void on_trier_clicked ();
+    void on_exporter_clicked();
+
 
 private:
     Ui::MainWindow *ui;

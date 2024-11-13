@@ -25,10 +25,8 @@ public:
     }
 
 
-    //Creation prescription
-    bool insert_prescription(Prescription &prescription);
-    //lecture Prescription
-    Prescription readPrescription(int prescriptionID);
+
+   static int get_size();
 };
 
 #endif // CONNECTION_H
