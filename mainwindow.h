@@ -24,6 +24,10 @@ private slots:
     void on_recherche_clicked();
     void on_trier_clicked ();
     void on_exporter_clicked();
+    void on_stat_clicked();
+    QStringList getMedicamentsInCategory( QString &category);
+    QString getCategoryOfMedicament(QString &medicament);
+    bool isMedicamentInStock( QString medicament);
 
 
 private:

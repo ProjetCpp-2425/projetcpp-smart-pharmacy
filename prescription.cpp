@@ -71,97 +71,34 @@ QSqlQueryModel * Prescription :: afficher()
 
 
 
-
-
-
-
-
-
-//static bool ajouter (Prescription pres);
-bool Prescription::ajouter(Prescription pres)
+bool Prescription::ajouter()
 {
-    QSqlQuery countQuery;
+    QSqlQuery query;
+    query.prepare(R"(
+        INSERT INTO PRESCRIPTION (ID_PERSCRIPTION, DATE_CREATION, NOM_PATIENT, NOM_MEDECIN, STATUT_PRESCRIPTION, DUREE_TRAITEMENT, DOSAGE, FREQUENCE, NOTE, ID_EMPLOYEE, MEDICAMENT)
+        VALUES (:id, :date_creation, :nom_patient, :nom_medecin, :statut, :duree_traitement, :dosage, :frequence, :note, :id_employee, :medicament)
+    )");
 
-        QSqlQuery query;
-        query.prepare("INSERT INTO prescription (ID_PERSCRIPTION, DATE_CREATION, NOM_PATIENT, NOM_MEDECIN, STATUT_PRESCRIPTION, DUREE_TRAITEMENT, DOSAGE, FREQUENCE, NOTE, MEDICAMENT) VALUES (:id, TO_DATE(:date, 'YYYY-MM-DD'), :nom, :medecin, :statut, :duree, :dosage, :frequence, :note, :medicament)");
+    // Use 'this' to call the getter methods on the current instance of the Prescription object
+    query.bindValue(":id", this->getID_Prescription());
+    query.bindValue(":date_creation", this->getDate_Prescription());
+    query.bindValue(":nom_patient", this->getNom_Patient());
+    query.bindValue(":nom_medecin", this->getNom_Medecin());
+    query.bindValue(":statut", this->getStatut());
+    query.bindValue(":duree_traitement", this->getDuree_traitement());
+    query.bindValue(":dosage", this->getDosage());
+    query.bindValue(":frequence", this->getFrequence());
+    query.bindValue(":note", this->getNote());
 
-        QString id =QString ::number (pres.ID_prescription);
-        query.bindValue(":id",id);
+    query.bindValue(":medicament", this->getMedicament());
 
-        qDebug() << pres.ID_prescription<<"\n" << pres.Date_prescription;
-        query.bindValue(":date", pres.Date_prescription.toString("yyyy-MM-dd"));
-        query.bindValue(":nom", pres.Nom_patient);
-        query.bindValue(":medecin", pres.Nom_medecin);
-        query.bindValue(":statut", pres.Statut_prescription);
-        query.bindValue(":duree", pres.Duree_traitement);
-        query.bindValue(":dosage", pres.Dosage);
-        query.bindValue(":frequence", pres.Frequence);
-        query.bindValue(":note", pres.Note);
-        query.bindValue(":medicament", pres.Medicament);
-
-        qDebug() << "Executing query:" << query.executedQuery();
-
-        if (!query.exec()) {
-            qDebug() << "Error adding prescription:" << query.lastError().text();
-            return false;
-        }
-
-        qDebug() << "Prescription added successfully";
-        return true;
+    if (!query.exec()) {
+        qDebug() << "SQL error in ajouter:" << query.lastError().text();
+        return false;
+    }
+    return true;
 }
 
-
-bool Prescription :: genereText()
-{
-
-    QString filePath ="C:/Users/binda77a/Desktop/Prescription/prescriptions.txt";
-
-
-       QSqlQuery query;
-       query.prepare("SELECT * FROM PRESCRIPTION ORDER BY NOM_PATIENT");
-
-
-       if (!query.exec()) {
-           qDebug() << "Error fetching data from database:" << query.lastError().text();
-           return false;
-       }
-
-       // Open the file for writing
-       QFile file(filePath);
-       if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-           qDebug() << "Error opening file for writing:" << file.errorString();
-           return false;
-       }
-
-       QTextStream out(&file);
-
-       // Write a header to the file
-       out << "ID_PRESCRIPTION\tDATE_CREATION\tNOM_PATIENT\tNOM_MEDECIN\tSTATUT_PRESCRIPTION\t"
-              "DUREE_TRAITEMENT\tDOSAGE\tFREQUENCE\tNOTE\tMEDICAMENT\n";
-
-       // Loop through the query results and write each record to the file
-       while (query.next()) {
-           out << query.value("ID_PERSCRIPTION").toString() << "\t"
-               << query.value("DATE_CREATION").toDate().toString("yyyy-MM-dd") << "\t"
-               << query.value("NOM_PATIENT").toString() << "\t"
-               << query.value("NOM_MEDECIN").toString() << "\t"
-               << query.value("STATUT_PRESCRIPTION").toString() << "\t"
-               << query.value("DUREE_TRAITEMENT").toString() << "\t"
-               << query.value("DOSAGE").toString() << "\t"
-               << query.value("FREQUENCE").toString() << "\t"
-               << query.value("NOTE").toString() << "\t"
-               << query.value("MEDICAMENT").toString() << "\n";
-       }
-
-
-       file.close();
-       qDebug() << "Data successfully written to" << filePath;
-
-       return true;
-
-
-
-}
 
 
 
@@ -219,7 +156,57 @@ QSqlQueryModel* Prescription::trier_nom() {
     return model;
 }
 
+bool Prescription::renew(QString nom_patient, QString nom_medecin, QString medicament, QString dosage, int frequence, int duree_traitement) {
+    QSqlQuery query;
+    query.prepare(R"(
+        UPDATE PRESCRIPTION
+        SET STATUT_PRESCRIPTION = 'Active', DATE_CREATION = :date_creation
+        WHERE NOM_PATIENT = :nom_patient
+          AND NOM_MEDECIN = :nom_medecin
+          AND MEDICAMENT = :medicament
+          AND DOSAGE = :dosage
+          AND FREQUENCE = :frequence
+          AND DUREE_TRAITEMENT = :duree_traitement
+    )");
+
+    query.bindValue(":date_creation", QDate::currentDate());
+    query.bindValue(":nom_patient", nom_patient);
+    query.bindValue(":nom_medecin", nom_medecin);
+    query.bindValue(":medicament", medicament);
+    query.bindValue(":dosage", dosage);
+    query.bindValue(":frequence", frequence);
+    query.bindValue(":duree_traitement", duree_traitement);
+
+    if (!query.exec()) {
+        qDebug() << "SQL error in renew:" << query.lastError().text();
+        return false;
+    }
+    return query.numRowsAffected() > 0; // Check if any row was updated
+}
 
 
 
+bool Prescription::exists(QString nom_patient, QString nom_medecin, QString medicament, QString dosage, int frequence, int duree_traitement) {
+    QSqlQuery query;
+    query.prepare(R"(
+        SELECT ID_PERSCRIPTION FROM PRESCRIPTION
+        WHERE NOM_PATIENT = :nom_patient
+          AND NOM_MEDECIN = :nom_medecin
+          AND MEDICAMENT = :medicament
+          AND DOSAGE = :dosage
+          AND FREQUENCE = :frequence
+          AND DUREE_TRAITEMENT = :duree_traitement
+    )");
+    query.bindValue(":nom_patient", nom_patient);
+    query.bindValue(":nom_medecin", nom_medecin);
+    query.bindValue(":medicament", medicament);
+    query.bindValue(":dosage", dosage);
+    query.bindValue(":frequence", frequence);
+    query.bindValue(":duree_traitement", duree_traitement);
 
+    if (!query.exec()) {
+        qDebug() << "SQL error in exists:" << query.lastError().text();
+        return false;
+    }
+    return query.next(); // Returns true if a matching row exists
+}

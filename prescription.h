@@ -59,11 +59,15 @@ public:
 
 
 static QSqlQueryModel * afficher();
-static bool ajouter (Prescription pres);
+bool ajouter ();
 static bool supprimer(int id);
 static bool modifier ();
 static QSqlQueryModel* trier_nom();
 static bool genereText();
+bool renew(QString nom_patient, QString nom_medecin, QString medicament, QString dosage, int frequence, int duree_traitement);
+
+static bool exists(QString nom_patient, QString nom_medecin, QString medicament, QString dosage, int frequence, int duree_traitement);
+
 
 
 
