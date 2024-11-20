@@ -20,7 +20,11 @@ public:
     QSqlQueryModel* afficher();
     bool supprimer(int id);
     QSqlQueryModel* recherche(const QString& critere, const QVariant& valeur);  // Search function based on criteria
-     QSqlQueryModel* trier(const QString& critere);
+    QSqlQueryModel* trierParCategorie(const QString& category);
+
+    QSqlQueryModel* trierParQuantite(bool ascending);
+
+    QSqlQueryModel* trierParExpiration();
 
     // Getters
     int getId() const;

@@ -17,7 +17,9 @@ public:
 
 private:
     Ui::MainWindow *ui;
+
 public slots:
+
     void on_pushButton_ajouter_clicked();
     void on_pushButton_modifier_clicked();
     void on_pushButton_afficher_clicked();
@@ -25,7 +27,10 @@ public slots:
     void on_pushButton_recherche_clicked();
     void on_pushButton_trier_clicked();
     void on_pushButton_exportpdf_clicked();
-
+    void on_pushButton_stats_clicked();
+    void showNotification();
+    void on_sendButton_clicked();
+    bool sendEmail(const QString &recipient, const QString &subject, const QString &message);
 };
 
 #endif // MAINWINDOW_H
