@@ -2,7 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-
+#include "stock.h"
 namespace Ui {
 class MainWindow;
 }
@@ -17,7 +17,7 @@ public:
 
 private:
     Ui::MainWindow *ui;
-
+    Stock stock;
 public slots:
 
     void on_pushButton_ajouter_clicked();

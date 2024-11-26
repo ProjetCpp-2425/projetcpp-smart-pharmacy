@@ -71,21 +71,21 @@
      <widget class="QLabel" name="label_10">
       <property name="geometry">
        <rect>
-        <x>440</x>
-        <y>0</y>
-        <width>661</width>
-        <height>101</height>
+        <x>490</x>
+        <y>20</y>
+        <width>571</width>
+        <height>111</height>
        </rect>
       </property>
       <property name="text">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:26pt; font-weight:700; color:#d2e7ff;&quot;&gt;PharmaFlow&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:48pt; font-weight:700; color:#d2e7ff;&quot;&gt;PharmaFlow&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
      </widget>
      <widget class="QTabWidget" name="tabWidget">
       <property name="geometry">
        <rect>
         <x>170</x>
-        <y>70</y>
+        <y>120</y>
         <width>1311</width>
         <height>621</height>
        </rect>
@@ -436,6 +436,11 @@
           <string>Selon_Categorie</string>
          </property>
         </item>
+        <item>
+         <property name="text">
+          <string>Seuil</string>
+         </property>
+        </item>
        </widget>
        <widget class="QLineEdit" name="lineEdit_recherche">
         <property name="geometry">
@@ -481,22 +486,6 @@ background-color: rgb(255, 255, 255);</string>
         </property>
         <property name="text">
          <string>TRIER</string>
-        </property>
-       </widget>
-       <widget class="QPushButton" name="pushButton_stats">
-        <property name="geometry">
-         <rect>
-          <x>320</x>
-          <y>510</y>
-          <width>211</width>
-          <height>71</height>
-         </rect>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">background-color: rgb(29, 139, 170);</string>
-        </property>
-        <property name="text">
-         <string>Statistiques</string>
         </property>
        </widget>
        <widget class="QPushButton" name="pushButton_exportpdf">
@@ -632,6 +621,9 @@ background-color: rgb(255, 255, 255);</string>
         <property name="styleSheet">
          <string notr="true">background-color: rgb(255, 255, 255);</string>
         </property>
+        <property name="text">
+         <string/>
+        </property>
        </widget>
        <widget class="QLineEdit" name="subjectLineEdit">
         <property name="geometry">
@@ -731,7 +723,6 @@ background-color: rgb(255, 255, 255);</string>
        <zorder>lineEdit_recherche</zorder>
        <zorder>tableView_2</zorder>
        <zorder>pushButton_trier</zorder>
-       <zorder>pushButton_stats</zorder>
        <zorder>pushButton_exportpdf</zorder>
        <zorder>radioButton_expiration</zorder>
        <zorder>radioButton_quantite</zorder>
@@ -747,6 +738,37 @@ background-color: rgb(255, 255, 255);</string>
        <zorder>label_9</zorder>
        <zorder>label_11</zorder>
        <zorder>label_12</zorder>
+      </widget>
+      <widget class="QWidget" name="tab">
+       <attribute name="title">
+        <string>statistiques</string>
+       </attribute>
+       <widget class="QGraphicsView" name="graphicsView_stats">
+        <property name="geometry">
+         <rect>
+          <x>35</x>
+          <y>51</y>
+          <width>1201</width>
+          <height>441</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_stats">
+        <property name="geometry">
+         <rect>
+          <x>510</x>
+          <y>510</y>
+          <width>211</width>
+          <height>71</height>
+         </rect>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(29, 139, 170);</string>
+        </property>
+        <property name="text">
+         <string>Statistiques</string>
+        </property>
+       </widget>
       </widget>
      </widget>
      <widget class="QPushButton" name="pushButton_4">
@@ -794,17 +816,27 @@ background-color: rgb(255, 255, 255);</string>
        <string>Transactions</string>
       </property>
      </widget>
+     <widget class="QLabel" name="lablogo">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>30</y>
+        <width>141</width>
+        <height>151</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
      <widget class="QLabel" name="label_5">
       <property name="geometry">
        <rect>
-        <x>-10</x>
-        <y>20</y>
-        <width>181</width>
-        <height>181</height>
+        <x>10</x>
+        <y>40</y>
+        <width>161</width>
+        <height>161</height>
        </rect>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">background-color: rgb(129, 194, 100);</string>
       </property>
       <property name="text">
        <string/>
@@ -823,6 +855,7 @@ background-color: rgb(255, 255, 255);</string>
      <zorder>pushButton_4</zorder>
      <zorder>pushButton_3</zorder>
      <zorder>pushButton_5</zorder>
+     <zorder>lablogo</zorder>
      <zorder>label_5</zorder>
     </widget>
    </widget>

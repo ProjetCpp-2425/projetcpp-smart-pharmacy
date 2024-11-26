@@ -10,6 +10,13 @@ Stock::Stock(int id, const QString &nomProduit, const QString &categorie, int qu
     : id(id), nomProduit(nomProduit), categorie(categorie), quantite(quantite), dateExp(dateExp), prixAchat(prixAchat), prixVente(prixVente) {}
 
 bool Stock::ajouter() {
+    // Check if the required fields are not empty or invalid before attempting insertion
+    if (nomProduit.isEmpty() || categorie.isEmpty() || quantite <= 0 || prixAchat <= 0 || prixVente <= 0) {
+        qDebug() << "Input validation failed. Please check the fields.";
+        return false;  // Return false if validation fails
+    }
+
+    // Prepare SQL query to insert a new record into the 'stock' table
     QSqlQuery query;
     query.prepare("INSERT INTO stock (id, nom_produit, categorie, quantite, date_exp, prix_achat, prix_vente) "
                   "VALUES (:id, :nom_produit, :categorie, :quantite, :date_exp, :prix_achat, :prix_vente)");
@@ -21,12 +28,16 @@ bool Stock::ajouter() {
     query.bindValue(":prix_achat", prixAchat);
     query.bindValue(":prix_vente", prixVente);
 
+    // Execute the query and check for errors
     if (!query.exec()) {
-        qDebug() << "Add Error:" << query.lastError().text();
-        return false;
+        qDebug() << "Error adding product to stock:" << query.lastError().text();
+        return false;  // Return false if query execution fails
     }
+
+    // Return true if the product was added successfully
     return true;
 }
+
 
 bool Stock::modifier() {
     QSqlQuery query;
