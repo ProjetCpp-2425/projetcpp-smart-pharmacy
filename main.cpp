@@ -12,8 +12,6 @@ int main(int argc, char *argv[])
     GestionCommande w;
 
 
-
-
     if(test)
     {
 
