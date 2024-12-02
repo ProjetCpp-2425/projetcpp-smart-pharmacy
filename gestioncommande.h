@@ -22,6 +22,7 @@ public:
     ~GestionCommande();
     bool addToHistorique(int userId, QString &action, QString &actionDetail);
 
+    void updateComboBoxProduitEtFournisseur();
 
 private slots:
     void on_pushButton_recherche_produit_clicked();
@@ -72,7 +73,6 @@ private slots:
 private:
     Ui::GestionCommande *ui;
     Commande CommandeTMP;
-    Arduino arduino;
     QTimer *serialTimer;                    // Timer for listening to serial data
     QSerialPort *serial; // Define serial as a member
     QString buffer;

@@ -20,6 +20,8 @@
 #include <iostream>
 #include <QLineSeries>
 
+extern Arduino arduino;
+
 GestionCommande::GestionCommande(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::GestionCommande)
@@ -38,13 +40,19 @@ GestionCommande::GestionCommande(QWidget *parent)
     ui->Error_produit_2->clear();
     ui->Error_fournisseur_2->clear();
 
+    ui->dateTimeEdit->setDateTime(QDateTime::currentDateTime());
+    ui->dateEdit_datecommande->setDateTime(QDateTime::currentDateTime());
+
     ui->tableView_commande->setModel(this->CommandeTMP.afficher());
     ui->tableView_commande->resizeColumnsToContents();
 
     connect(ui->tableView_commande, &QTableView::clicked, this, &GestionCommande::onTableViewClicked);
-    connect(ui->pushButton_verify, &QPushButton::clicked, this, &GestionCommande::on_pushButton_verify_clicked);
 
     arduino.is_connected = 0;
+
+    updateComboBoxProduitEtFournisseur();
+
+
 
 
 
@@ -89,14 +97,6 @@ void GestionCommande::on_pushButton_recherche_produit_clicked()
 
         ui->comboBox_produit->clear();
 
-
-        QSqlDatabase db = QSqlDatabase::database();
-        if (!db.isOpen()) {
-            QMessageBox::critical(this, "Database Error", "Database connection is not open");
-            return;
-        }
-
-
         QSqlQuery query;
         query.prepare("SELECT nom_p FROM PRODUITS");
 
@@ -123,14 +123,6 @@ void GestionCommande::on_pushButton_recherche_fourni_clicked()
 
     ui->comboBox_Fournisseur->clear();
 
-
-    QSqlDatabase db = QSqlDatabase::database();
-    if (!db.isOpen()) {
-        QMessageBox::critical(this, "Database Error", "Database connection is not open");
-        return;
-    }
-
-
     QSqlQuery queryFournisseur;
     queryFournisseur.prepare("SELECT nom_fr FROM FOURNISSEURS");
 
@@ -154,133 +146,119 @@ void GestionCommande::on_pushButton_recherche_fourni_clicked()
 
 void GestionCommande::on_pushButton_clicked()
 {
+    ui->Error_adresse->clear();
+    ui->errorDate->clear();
+    ui->Error_remarque->clear();
+    ui->Error_produit->clear();
+    ui->Error_fournisseur->clear();
 
-        ui->Error_adresse->clear();
-        ui->errorDate->clear();
-        ui->Error_remarque->clear();
-        ui->Error_produit->clear();
-        ui->Error_fournisseur->clear();
+    QString adresse = ui->lineEdit_adresse->text();
+    QDateTime dateCommande = ui->dateTimeEdit->dateTime();
+    QString remarque = ui->lineEdit_remarque->text();
+    QString produitName = ui->comboBox_produit->currentText();
+    QString fournisseurName = ui->comboBox_Fournisseur->currentText();
 
+    bool isValid = true;
 
-        QString adresse = ui->lineEdit_adresse->text();
-        QDateTime dateCommande = ui->dateTimeEdit->dateTime();
-        QString remarque = ui->lineEdit_remarque->text();
-        QString produitName = ui->comboBox_produit->currentText();
-        QString fournisseurName = ui->comboBox_Fournisseur->currentText();
+    if (adresse.isEmpty()) {
+        ui->Error_adresse->setText("L'adresse ne peut pas être vide.");
+        isValid = false;
+    }
+    if (dateCommande < QDateTime::currentDateTime()) {
+        ui->errorDate->setText("La date doit être dans le futur.");
+        isValid = false;
+    }
+    if (remarque.isEmpty()) {
+        ui->Error_remarque->setText("Remarque ne peut pas être vide.");
+        isValid = false;
+    }
+    if (produitName.isEmpty()) {
+        ui->Error_produit->setText("Produit ne peut pas être vide.");
+        isValid = false;
+    }
+    if (fournisseurName.isEmpty()) {
+        ui->Error_fournisseur->setText("Fournisseur ne peut pas être vide.");
+        isValid = false;
+    }
 
+    if (isValid == false) {
+        QMessageBox::critical(this, "Validation Erreur", "veuillez corriger les erreurs et réessayer.");
+        return;
+    }
 
-        bool isValid = true;
+    int produitId = getProduitId(produitName);
+    int fournisseurId = getFournisseurId(fournisseurName);
 
-        if (adresse.isEmpty()) {
-            ui->Error_adresse->setText("Adresse cannot be empty.");
-            isValid = false;
-        }
-        if (dateCommande < QDateTime::currentDateTime()) {
-            ui->errorDate->setText("Date must be in the future.");
-            isValid = false;
-        }
-        if (remarque.isEmpty()) {
-            ui->Error_remarque->setText("Remarque cannot be empty.");
-            isValid = false;
-        }
-        if (produitName.isEmpty()) {
-            ui->Error_produit->setText("Produit cannot be empty.");
-            isValid = false;
-        }
-        if (fournisseurName.isEmpty()) {
-            ui->Error_fournisseur->setText("Fournisseur cannot be empty.");
-            isValid = false;
-        }
-
-
-        if (isValid == false) {
-            QMessageBox::critical(this, "Validation Error", "Please fix the errors and try again.");
-            return;
-        }
-
-
-
-
-        int produitId = getProduitId(produitName);
-        int fournisseurId = getFournisseurId(fournisseurName);
+    if (produitId == -1 || fournisseurId == -1) {
+        QMessageBox::critical(this, "Insertion Erreur", "impossible de terminer l'opération (fk non valide).");
+        return;
+    }
 
 
-        if (produitId == -1 || fournisseurId == -1) {
-            QMessageBox::critical(this, "Insert Error", "Invalid foreign key references.");
-            return;
-        }
+    QSqlQuery query;
+    query.prepare(R"(
+        INSERT INTO COMMANDES
+        ("ADRESSE", "DATE_COMMANDE", "STATUS_COMMANDE", "REMARQUE", "CODEF", "CIN", "PRODUIT")
+        VALUES (:adresse, TO_DATE(:date_commande, 'YYYY-MM-DD HH24:MI:SS'), :status_commande, :remarque, :codef, :cin, :produit)
+    )");
 
+    query.bindValue(":adresse", adresse);
+    query.bindValue(":date_commande", dateCommande.toString("yyyy-MM-dd HH:mm:ss"));
+    query.bindValue(":status_commande", "Pending");
+    query.bindValue(":remarque", remarque);
+    query.bindValue(":codef", fournisseurId);
+    query.bindValue(":cin", 14525546);
+    query.bindValue(":produit", produitId);
 
-        QSqlDatabase db = QSqlDatabase::database();
-        if (!db.isOpen()) {
-            QMessageBox::critical(this, "Database Error", "Database connection is not open");
-            return;
-        }
+    if (query.exec() == false) {
+        QMessageBox::critical(this, "Insert Error", query.lastError().text());
+    } else {
+        QMessageBox::information(this, "Success", "Commande insérée avec succès!");
+        ui->tableView_commande->setModel(this->CommandeTMP.afficher());
+        ui->tableView_commande->resizeColumnsToContents();
 
+        // Récupérer les détails de la commande pour l'historique
+        QString action = "AJOUTER";
+        QString actionDetail = QString("Nouvelle commande ajoutée. Adresse: %1, Date: %2, Produit: %3, Fournisseur: %4, Remarque: %5")
+                                   .arg(adresse)
+                                   .arg(dateCommande.toString("yyyy-MM-dd HH:mm:ss"))
+                                   .arg(produitName)
+                                   .arg(fournisseurName)
+                                   .arg(remarque);
 
-        QSqlQuery query;
-        query.prepare(R"(
-            INSERT INTO COMMANDES
-            ("ADRESSE", "DATE_COMMANDE", "STATUS_COMMANDE", "REMARQUE", "CODEF", "CIN", "PRODUIT")
-            VALUES (:adresse, TO_DATE(:date_commande, 'YYYY-MM-DD HH24:MI:SS'), :status_commande, :remarque, :codef, :cin, :produit)
-        )");
-
-
-        query.bindValue(":adresse", adresse);
-        query.bindValue(":date_commande", dateCommande.toString("yyyy-MM-dd HH:mm:ss"));
-        query.bindValue(":status_commande", "Pending");
-        query.bindValue(":remarque", remarque);
-        query.bindValue(":codef", fournisseurId);
-        query.bindValue(":cin", 14525546);
-        query.bindValue(":produit", produitId);
-
-
-        if (query.exec() == false) {
-            QMessageBox::critical(this, "Insert Error", query.lastError().text());
-        } else {
-            QMessageBox::information(this, "Success", "Commande inserted successfully!");
-            ui->tableView_commande->setModel(this->CommandeTMP.afficher());
-            ui->tableView_commande->resizeColumnsToContents();
-
-
-            int userId = 14525546; // Remplacez par l'ID utilisateur réel
-            QString action = "AJOUTER";
-            QString actionDetail = "Ajout d'une nouvelle commande";
-
-            addToHistorique(userId, action, actionDetail);
-
-
-
-        }
+        int userId = 14525546; // Remplacez par l'ID utilisateur réel
+        addToHistorique(userId, action, actionDetail);
+    }
 }
+
 
 void GestionCommande::on_pushButton_10_clicked()
 {
+    QString code = ui->lineEdit_Supprimer->text().trimmed();
 
-        QString code = ui->lineEdit_Supprimer->text().trimmed();
+    if (code.isEmpty()) {
+        QMessageBox::warning(this, "Attention", "Veuillez saisir un code de commande pour supprimer.");
+        return;
+    }
 
+    bool deletionSuccess = this->CommandeTMP.supprimer(code.toInt());
 
-        if (code.isEmpty()) {
-            QMessageBox::warning(this, "Warning", "Please enter a Code Commande to delete.");
-            return;
-        }  
+    if (deletionSuccess) {
+        QMessageBox::information(this, "Succes", "Commande supprimée avec succès avec CodeCommande: " + code);
 
-            bool deletionSuccess = this->CommandeTMP.supprimer(code.toInt());
+        ui->tableView_commande->setModel(CommandeTMP.afficher());
+        ui->tableView_commande->resizeColumnsToContents();
 
-            if (deletionSuccess) {
-                QMessageBox::information(this, "Success", "Commande deleted successfully with CodeCommande: " + code);
-                ui->tableView_commande->setModel(CommandeTMP.afficher());
-                int userId = 14525546; // Remplacez par l'ID utilisateur réel
-                QString action = "SUPPRIMER";
-                QString actionDetail = "Suppression d'une commande existante";
+        int userId = 14525546; // Replace with the actual user ID
+        QString action = "SUPPRIMER";
+        QString actionDetail = QString("Suppression de la commande avec CodeCommande: %1").arg(code);
 
-                addToHistorique(userId, action, actionDetail);
-            } else {
-                QMessageBox::critical(this, "Error", "Failed to delete Commande with Code " + code);
-            }
-
-
+        addToHistorique(userId, action, actionDetail);
+    } else {
+        QMessageBox::critical(this, "Erreur", "Échec de la suppression de la commande de code " + code);
+    }
 }
+
 
 
 void GestionCommande::onTableViewClicked(const QModelIndex &index)
@@ -301,7 +279,7 @@ void GestionCommande::on_pushButton_setModifier_clicked()
     Commande tmp = CommandeTMP.trouver(code);
 
     if (tmp.getCodeCommande() == 0) {
-        QMessageBox::warning(this, "Error", "Commande not found.");
+        QMessageBox::warning(this, "Error", "Commande non trouvée.");
         return;
     }
 
@@ -324,7 +302,7 @@ void GestionCommande::on_pushButton_setModifier_clicked()
 
         ui->comboBox_produit_2->setCurrentIndex(productIndex);
     } else {
-        QMessageBox::warning(this, "Error", "Product not found.");
+        QMessageBox::warning(this, "Erreur", "Produit non trouvé.");
     }
 
     QSqlQuery queryFournisseur;
@@ -341,7 +319,7 @@ void GestionCommande::on_pushButton_setModifier_clicked()
 
         ui->comboBox_Fournisseur_2->setCurrentIndex(fournisseurIndex);
     } else {
-        QMessageBox::warning(this, "Error", "Fournisseur not found.");
+        QMessageBox::warning(this, "Erreur", "Fournisseur non trouvé.");
     }
 }
 
@@ -350,11 +328,6 @@ void GestionCommande::on_pushButton_recherche_fourni_2_clicked()
 {
     ui->comboBox_Fournisseur_2->clear();
 
-    QSqlDatabase db = QSqlDatabase::database();
-    if (!db.isOpen()) {
-        QMessageBox::critical(this, "Database Error", "Database connection is not open");
-        return;
-    }
 
     QSqlQuery queryFournisseur;
     queryFournisseur.prepare("SELECT nom_fr FROM FOURNISSEURS");
@@ -378,11 +351,7 @@ void GestionCommande::on_pushButton_recherche_produit_2_clicked()
 {
         ui->comboBox_produit_2->clear();
 
-        QSqlDatabase db = QSqlDatabase::database();
-        if (!db.isOpen()) {
-            QMessageBox::critical(this, "Database Error", "Database connection is not open");
-            return;
-        }
+
 
         QSqlQuery query;
         query.prepare("SELECT nom_p FROM PRODUITS");
@@ -404,170 +373,180 @@ void GestionCommande::on_pushButton_recherche_produit_2_clicked()
 
 void GestionCommande::on_pushButton_validerModifier_clicked()
 {
-        ui->Error_adresse->clear();
-        ui->errorDate->clear();
-        ui->Error_remarque->clear();
-        ui->Error_produit->clear();
-        ui->Error_fournisseur->clear();
+    ui->Error_adresse->clear();
+    ui->errorDate->clear();
+    ui->Error_remarque->clear();
+    ui->Error_produit->clear();
+    ui->Error_fournisseur->clear();
 
-        QString adresse = ui->lineEdit_adresse_2->text();
-        QDateTime dateCommande = ui->dateTimeEdit_2->dateTime();
-        QString remarque = ui->lineEdit_remarque_2->text();
-        QString produitName = ui->comboBox_produit_2->currentText();
-        QString fournisseurName = ui->comboBox_Fournisseur_2->currentText();
-        int codeCommande = ui->lineEdit_codecommande->text().toInt();
+    QString adresse = ui->lineEdit_adresse_2->text();
+    QDateTime dateCommande = ui->dateTimeEdit_2->dateTime();
+    QString remarque = ui->lineEdit_remarque_2->text();
+    QString produitName = ui->comboBox_produit_2->currentText();
+    QString fournisseurName = ui->comboBox_Fournisseur_2->currentText();
+    int codeCommande = ui->lineEdit_codecommande->text().toInt();
 
-        bool isValid = true;
+    bool isValid = true;
 
-        if (adresse.isEmpty()) {
-            ui->Error_adresse_2->setText("Adresse cannot be empty.");
-            isValid = false;
-        }
-        if (dateCommande < QDateTime::currentDateTime()) {
-            ui->errorDate_2->setText("Date must be in the future.");
-            isValid = false;
-        }
-        if (remarque.isEmpty()) {
-            ui->Error_remarque_2->setText("Remarque cannot be empty.");
-            isValid = false;
-        }
-        if (produitName.isEmpty()) {
-            ui->Error_produit_2->setText("Produit cannot be empty.");
-            isValid = false;
-        }
-        if (fournisseurName.isEmpty()) {
-            ui->Error_fournisseur_2->setText("Fournisseur cannot be empty.");
-            isValid = false;
-        }
+    if (adresse.isEmpty()) {
+        ui->Error_adresse_2->setText("l'adresse ne peut pas être vide.");
+        isValid = false;
+    }
+    if (dateCommande < QDateTime::currentDateTime()) {
+        ui->errorDate_2->setText("La date doit être dans le futur.");
+        isValid = false;
+    }
+    if (remarque.isEmpty()) {
+        ui->Error_remarque_2->setText("Remarque ne peut pas être vide.");
+        isValid = false;
+    }
+    if (produitName.isEmpty()) {
+        ui->Error_produit_2->setText("Produit ne peut pas être vide.");
+        isValid = false;
+    }
+    if (fournisseurName.isEmpty()) {
+        ui->Error_fournisseur_2->setText("Fournisseur ne peut pas être vide.");
+        isValid = false;
+    }
 
-        if (!isValid) {
-            QMessageBox::critical(this, "Validation Error", "Please fix the errors and try again.");
-            return;
-        }
+    if (!isValid) {
+        QMessageBox::critical(this, "Validation Erreur", "Veuillez corriger les erreurs et réessayer.");
+        return;
+    }
 
-        int produitId = getProduitId(produitName);
-        int fournisseurId = getFournisseurId(fournisseurName);
+    int produitId = getProduitId(produitName);
+    int fournisseurId = getFournisseurId(fournisseurName);
 
-
-        if (produitId == -1 || fournisseurId == -1) {
-            QMessageBox::critical(this, "Update Error", "Invalid foreign key references.");
-            return;
-        }
-
-
-        QSqlDatabase db = QSqlDatabase::database();
-        if (!db.isOpen()) {
-            QMessageBox::critical(this, "Database Error", "Database connection is not open");
-            return;
-        }
+    if (produitId == -1 || fournisseurId == -1) {
+        QMessageBox::critical(this, "Erreur de modification", "impossible de terminer l'opération (fk non valid).");
+        return;
+    }
 
 
-        QSqlQuery query;
-        query.prepare(R"(
-            UPDATE COMMANDES
-            SET "ADRESSE" = :adresse,
-                "DATE_COMMANDE" = TO_DATE(:date_commande, 'YYYY-MM-DD HH24:MI:SS'),
-                "STATUS_COMMANDE" = :status_commande,
-                "REMARQUE" = :remarque,
-                "CODEF" = :codef,
-                "CIN" = :cin,
-                "PRODUIT" = :produit
-            WHERE "CODE_COMMANDE" = :code_commande
-        )");
 
-        query.bindValue(":adresse", adresse);
-        query.bindValue(":date_commande", dateCommande.toString("yyyy-MM-dd HH:mm:ss"));
-        query.bindValue(":status_commande", "Pending");
-        query.bindValue(":remarque", remarque);
-        query.bindValue(":codef", fournisseurId);
-        query.bindValue(":cin", 14525546);
-        query.bindValue(":produit", produitId);
-        query.bindValue(":code_commande", codeCommande);
-        if (query.exec()==false) {
-            QMessageBox::critical(this, "Update Error", query.lastError().text());
-        } else {
-            QMessageBox::information(this, "Success", "Commande updated successfully!");
-            ui->tableView_commande->setModel(this->CommandeTMP.afficher());
-            ui->tableView_commande->resizeColumnsToContents();
+    QSqlQuery query;
+    query.prepare(R"(
+        UPDATE COMMANDES
+        SET "ADRESSE" = :adresse,
+            "DATE_COMMANDE" = TO_DATE(:date_commande, 'YYYY-MM-DD HH24:MI:SS'),
+            "STATUS_COMMANDE" = :status_commande,
+            "REMARQUE" = :remarque,
+            "CODEF" = :codef,
+            "CIN" = :cin,
+            "PRODUIT" = :produit
+        WHERE "CODE_COMMANDE" = :code_commande
+    )");
 
-            int userId = 14525546; // Remplacez par l'ID utilisateur réel
-            QString action = "MODIFIER";
-            QString actionDetail = "Modification d'une commande existante";
+    query.bindValue(":adresse", adresse);
+    query.bindValue(":date_commande", dateCommande.toString("yyyy-MM-dd HH:mm:ss"));
+    query.bindValue(":status_commande", "Pending");
+    query.bindValue(":remarque", remarque);
+    query.bindValue(":codef", fournisseurId);
+    query.bindValue(":cin", 14525546);
+    query.bindValue(":produit", produitId);
+    query.bindValue(":code_commande", codeCommande);
 
-            addToHistorique(userId, action, actionDetail);
-        }
+    if (query.exec() == false) {
+        QMessageBox::critical(this, "erreur de modification", query.lastError().text());
+    } else {
+        QMessageBox::information(this, "Succes", "Commande modifié avec succès!");
+        ui->tableView_commande->setModel(this->CommandeTMP.afficher());
+        ui->tableView_commande->resizeColumnsToContents();
+
+        // Récupérer les détails de la commande et du produit pour l'historique
+        QString action = "MODIFIER";
+        QString actionDetail = QString("Commande %1 modifiée. Adresse: %2, Date: %3, Produit: %4, Fournisseur: %5, Remarque: %6")
+                                   .arg(codeCommande)
+                                   .arg(adresse)
+                                   .arg(dateCommande.toString("yyyy-MM-dd HH:mm:ss"))
+                                   .arg(produitName)
+                                   .arg(fournisseurName)
+                                   .arg(remarque);
+
+        int userId = 14525546; // Remplacez par l'ID utilisateur réel
+
+        addToHistorique(userId, action, actionDetail);
+    }
 }
+
 
 void GestionCommande::on_pushButton_recherche_logs_clicked()
 {
-    // Get the User ID from the line edit
-        QString userId = ui->lineEdit_id_user_logs->text();
+    // Récupérer l'ID utilisateur depuis le champ de saisie
+    QString userId = ui->lineEdit_id_user_logs->text();
 
-        // Check if the User ID is valid
-        if (userId.isEmpty()) {
-            QMessageBox::warning(this, "Invalid Input", "Please enter a valid User ID.");
-            return;
-        }
-
-        // Prepare the SQL query
-        QSqlQuery query;
-        query.prepare("SELECT USER_ID, ACTION, ACTIONDETAIL, TO_CHAR(DATEACTION, 'YYYY-MM-DD HH24:MI:SS') AS LOG_DATE FROM HISTORIQUE WHERE USER_ID = :userId ORDER BY DATEACTION DESC");
-        query.bindValue(":userId", userId);
-
-        // Execute the query
-        if (!query.exec()) {
-            QMessageBox::critical(this, "Database Error", "Failed to retrieve logs: " + query.lastError().text());
-            return;
-        }
-
-        // Create the log output string
-        QString logOutput;
-
-        while (query.next()) {
-            QString userId = query.value("USER_ID").toString();
-            QString action = query.value("ACTION").toString();
-            QString actionDetail = query.value("ACTIONDETAIL").toString();
-            QString dateTime = query.value("LOG_DATE").toString();
-
-            // Format the log as text
-            logOutput += QString("User ID %1 has action (%2: %3) at %4.\n")
-                             .arg(userId)
-                             .arg(action)
-                             .arg(actionDetail)
-                             .arg(dateTime);
-        }
-
-        // Check if any logs were found
-        if (logOutput.isEmpty()) {
-            logOutput = "No logs found for the specified User ID.";
-        }
-
-        // Display the logs in a QTextBrowser or QTextEdit
-        ui->textBrowser->setPlainText(logOutput);
-}
-
-
-bool GestionCommande::addToHistorique(int userId, QString &action, QString &actionDetail)
-{
-    // Prepare the SQL query
-    QSqlQuery query;
-    query.prepare("INSERT INTO HISTORIQUE (USER_ID, ACTION, ACTIONDETAIL, DATEACTION) "
-                  "VALUES (:userId, :action, :actionDetail, SYSDATE)");
-
-    // Bind values to the query
-    query.bindValue(":userId", userId);
-    query.bindValue(":action", action);
-    query.bindValue(":actionDetail", actionDetail);
-
-    // Execute the query and handle errors
-    if (!query.exec()) {
-        qDebug() << "Failed to add to HISTORIQUE: " << query.lastError().text();
-        return false;
+    // Vérifier si l'ID utilisateur est valide
+    if (userId.isEmpty()) {
+        QMessageBox::warning(this, "Entrée invalide", "Veuillez saisir un ID utilisateur valide.");
+        return;
     }
 
-    qDebug() << "Record successfully added to HISTORIQUE.";
+    // Préparer la requête SQL
+    QSqlQuery query;
+    query.prepare("SELECT USER_ID, ACTION, ACTIONDETAIL, TO_CHAR(DATEACTION, 'YYYY-MM-DD HH24:MI:SS') AS LOG_DATE "
+                  "FROM HISTORIQUE WHERE USER_ID = :userId ORDER BY DATEACTION DESC");
+    query.bindValue(":userId", userId);
+
+    // Exécuter la requête
+    if (!query.exec()) {
+        QMessageBox::critical(this, "Erreur Base de Données", "Échec de la récupération des logs : " + query.lastError().text());
+        return;
+    }
+
+    // Créer la sortie des logs
+    QString sortieLogs;
+
+    while (query.next()) {
+        QString idUtilisateur = query.value("USER_ID").toString();
+        QString action = query.value("ACTION").toString();
+        QString detailAction = query.value("ACTIONDETAIL").toString();
+        QString dateHeure = query.value("LOG_DATE").toString();
+
+        // Formater le log en texte
+        sortieLogs += QString("L'utilisateur avec l'ID %1 a effectué l'action (%2). %3 à %4.\n")
+                          .arg(idUtilisateur)
+                          .arg(action)
+                          .arg(detailAction)
+                          .arg(dateHeure);
+    }
+
+    // Vérifier si des logs ont été trouvés
+    if (sortieLogs.isEmpty()) {
+        sortieLogs = "Aucune activité trouvée pour l'ID utilisateur spécifié.";
+    }
+
+    // Afficher les logs dans un QTextBrowser ou QTextEdit
+    ui->textBrowser->setPlainText(sortieLogs);
+}
+
+
+bool GestionCommande::addToHistorique(int userId,  QString &action,  QString &actionDetail)
+{
+    QSqlQuery query;
+    query.prepare(R"(
+        INSERT INTO HISTORIQUE
+        ("USER_ID", "ACTION", "ACTIONDETAIL", "DATEACTION")
+        VALUES (:user_id, :action, :details, TO_DATE(:date_action, 'YYYY-MM-DD HH24:MI:SS'))
+    )");
+
+    QString currentDateTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+
+    query.bindValue(":user_id", userId);
+    query.bindValue(":action", action);
+    query.bindValue(":details", actionDetail);
+    query.bindValue(":date_action", currentDateTime);
+
+    if (!query.exec()) {
+        qDebug() << "Error inserting into HISTORIQUE:" << query.lastError().text();
+        return false;
+    }
     return true;
 }
+
+
+
+
+
 #include <QFileDialog>
 #include <QImage>
 #include <QPainter>
@@ -782,28 +761,7 @@ void GestionCommande::on_pushButton_recherche_clicked()
 
 void GestionCommande::on_pushButton_connectarduino_clicked()
 {
-       int result = arduino.connect_arduino(); // Attempt to connect to Arduino
 
-       if (result == 0) {
-           qDebug() << "Connected to Arduino on port:" << arduino.getarduino_port_name();
-           ui->label_etatarduino->setText("Connected to Arduino!"); // Update label
-           arduino.is_connected = 1;
-
-       } else if (result == 1) {
-           qDebug() << "Failed to open the serial port.";
-           ui->label_etatarduino->setText("Serial port busy or unavailable."); // Update label
-           arduino.close_arduino();
-           arduino.is_connected = 0;
-
-
-       } else {
-           qDebug() << "Arduino not found.";
-           ui->label_etatarduino->setText("Arduino not found."); // Update label
-           arduino.close_arduino();
-           arduino.is_connected = 0;
-
-
-       }
 }
 
 void GestionCommande::on_pushButton_recherche_produit_3_clicked()
@@ -811,12 +769,6 @@ void GestionCommande::on_pushButton_recherche_produit_3_clicked()
 
     ui->comboBox_produit_3->clear();
 
-
-    QSqlDatabase db = QSqlDatabase::database();
-    if (!db.isOpen()) {
-        QMessageBox::critical(this, "Database Error", "Database connection is not open");
-        return;
-    }
 
 
     QSqlQuery query;
@@ -916,7 +868,7 @@ void GestionCommande::pauseSerialListener()
 void GestionCommande::on_pushButton_verify_clicked()
 {
     int requestedQuantity = ui->spinBox->value();
-
+    QString dataToSend = "Valide";
     QSqlQuery query;
     query.prepare("SELECT QUANTITE_EN_STOCK, NOM_P FROM PRODUITS WHERE NOM_P = :productName");
     query.bindValue(":productName", ui->comboBox_produit_3->currentText());  // Bind the product name to the query
@@ -927,7 +879,7 @@ void GestionCommande::on_pushButton_verify_clicked()
         QString productName = query.value("NOM_P").toString();
 
         if (availableQuantity >= requestedQuantity) {
-            QString dataToSend = "Valide";
+
 
             if (arduino.write_to_arduino(dataToSend.toUtf8()) > 0) {
                 qDebug() << "Data sent successfully:" << dataToSend;
@@ -947,7 +899,8 @@ void GestionCommande::on_pushButton_verify_clicked()
                 qDebug() << "Error updating stock: " << updateQuery.lastError().text();
             }
         } else {
-            arduino.write_to_arduino("NotValide");
+            dataToSend = "NotValide";
+            arduino.write_to_arduino(dataToSend.toUtf8());
             qDebug() << "Not enough stock.";
         }
     } else {
@@ -1015,31 +968,41 @@ void GestionCommande::on_pushButton_stat_clicked()
 
 #include <QSqlRecord>
 
+
+    /*
+    // Configure the printer for PDF output
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setPageSize(QPageSize::A4);  // Use QPageSize for paper size
+    printer.setOutputFileName(fileName);*/
+
+    // Configure the printer for PDF output
+
 void GestionCommande::on_pushButton_pdf_clicked()
 {
-    // Prepare a string stream to build the HTML content
     QString strStream;
     QTextStream out(&strStream);
 
-    // Prompt the user to select a file name for the PDF
     QString fileName = QFileDialog::getSaveFileName(
         nullptr, "Export PDF", QString(), "*.pdf");
     if (QFileInfo(fileName).suffix().isEmpty()) {
         fileName.append(".pdf");
     }
 
-    // Configure the printer for PDF output
     QPrinter printer(QPrinter::HighResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setPageSize(QPageSize::A4);  // Use QPageSize for paper size
     printer.setOutputFileName(fileName);
 
-    // Retrieve the selected date from dateEdit_datecommande
     QString selectedDate = ui->dateEdit_datecommande->date().toString("yyyy-MM-dd");
 
-    // Execute the filtered query
     QSqlQuery query;
-    query.prepare("SELECT * FROM commandes WHERE date_Commande > TO_DATE(:selectedDate, 'YYYY-MM-DD')");
+    query.prepare(
+        "SELECT c.CODE_COMMANDE, c.ADRESSE, c.DATE_COMMANDE, "
+        "c.STATUS_COMMANDE, c.REMARQUE, p.NOM_P "
+        "FROM COMMANDES c "
+        "JOIN PRODUITS p ON c.PRODUIT = p.ID_P "
+        "WHERE c.DATE_COMMANDE >= TO_DATE(:selectedDate, 'YYYY-MM-DD')");
     query.bindValue(":selectedDate", selectedDate);
 
     if (!query.exec()) {
@@ -1047,27 +1010,20 @@ void GestionCommande::on_pushButton_pdf_clicked()
         return;
     }
 
-    // Prepare table data from the query results
     QList<QStringList> tableData;
-    QStringList headers;
-
-    if (query.first()) {
-        // Capture the headers dynamically
-        for (int i = 0; i < query.record().count(); ++i) {
-            headers << query.record().fieldName(i);
-        }
-        query.previous(); // Reset query to process all rows
-    }
+    QStringList headers = {"Code Commande", "Adresse", "Date Commande", "Status", "Remarque", "Nom du Produit"};
 
     while (query.next()) {
         QStringList row;
-        for (int i = 0; i < query.record().count(); ++i) {
-            row << query.value(i).toString();
-        }
+        row << query.value("CODE_COMMANDE").toString()
+            << query.value("ADRESSE").toString()
+            << query.value("DATE_COMMANDE").toDate().toString("yyyy-MM-dd")
+            << query.value("STATUS_COMMANDE").toString()
+            << query.value("REMARQUE").toString()
+            << query.value("NOM_P").toString();
         tableData.append(row);
     }
 
-    // Begin constructing the HTML content
     out << "<html>\n"
         << "<head>\n"
         << "<meta Content=\"Text/html; charset=UTF-8\">\n"
@@ -1084,28 +1040,19 @@ void GestionCommande::on_pushButton_pdf_clicked()
         << "</style>\n"
         << "</head>\n"
         << "<body>\n"
-
-        // Header section
         << "<div class='header'>PharmaFLOW, Your Smart Pharmacy</div>\n"
-
-        // Title section
         << "<div class='title'>\n"
         << "<h1>Liste des Commandes</h1>\n"
-        << "<h3>Date selectionnee : " << selectedDate << "</h3>\n"
+        << "<h3>À partir de la date choisie : " << selectedDate << "</h3>\n"
         << "</div>\n"
+        << "<table>\n"
+        << "<thead><tr>";
 
-        // Begin table
-        << "<table>\n";
-
-    // Table headers
-    out << "<thead><tr>";
     for (const QString &header : headers) {
         out << "<th>" << header << "</th>";
     }
-    out << "</tr></thead>\n";
+    out << "</tr></thead>\n<tbody>\n";
 
-    // Table data
-    out << "<tbody>\n";
     for (const QStringList &row : tableData) {
         out << "<tr>";
         for (const QString &cell : row) {
@@ -1113,21 +1060,66 @@ void GestionCommande::on_pushButton_pdf_clicked()
         }
         out << "</tr>";
     }
-    out << "</tbody>\n";
 
-    out << "</table>\n"
-        << "</body>\n"
-        << "</html>\n";
+    out << "</tbody>\n</table>\n</body>\n</html>\n";
 
-    // Write the HTML content to the PDF
     QTextDocument document;
     document.setHtml(strStream);
     document.print(&printer);
 
-    QMessageBox::information(this, "Success", "PDF has been exported successfully!");
-
+    QMessageBox::information(this, "Succes", "PDF a été exporté avec succès !!");
 }
+
+
+
 
 void GestionCommande::on_pushButton_destroyed() {
     // Implémentation (même si elle est vide, elle doit exister)
+}
+
+
+void GestionCommande::updateComboBoxProduitEtFournisseur(){
+    ui->comboBox_Fournisseur->clear();
+
+    QSqlQuery queryFournisseur;
+    queryFournisseur.prepare("SELECT nom_fr FROM FOURNISSEURS");
+
+    if (!queryFournisseur.exec()) {
+        QMessageBox::critical(this, "Query Error", queryFournisseur.lastError().text());
+        return;
+    }
+
+
+    while (queryFournisseur.next()) {
+        QString fournisseurName = queryFournisseur.value(0).toString();
+        ui->comboBox_Fournisseur->addItem(fournisseurName);
+    }
+
+    ui->comboBox_produit->clear();
+    ui->comboBox_produit_3->clear();
+
+    QSqlQuery query;
+    query.prepare("SELECT nom_p FROM PRODUITS");
+
+
+    if (query.exec() == false) {
+        QMessageBox::critical(this, "Query Error", query.lastError().text());
+        return;
+    }
+
+
+    while (query.next()) {
+        QString productName = query.value(0).toString();
+        ui->comboBox_produit->addItem(productName);
+        ui->comboBox_produit_3->addItem(productName);
+
+    }
+
+
+    if (ui->comboBox_produit->count() == 0) {
+        QMessageBox::information(this, "No Products", "No products found in the database.");
+    }
+
+
+
 }
