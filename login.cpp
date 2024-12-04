@@ -44,15 +44,158 @@ void login::on_pushButton_4_clicked()
         QMessageBox::warning(nullptr, QObject::tr("Erreur"),
                              QObject::tr("CIN introuvable : accès refusé.\n"
                                          "Veuillez réessayer."), QMessageBox::Ok);
+        A.write_to_arduino("0");
     } else if (!e.isMdpCorrect(cinn, mdp)) {
         QMessageBox::warning(nullptr, QObject::tr("Erreur"),
                              QObject::tr("Mot de passe incorrect : accès refusé.\n"
                                          "Veuillez réessayer."), QMessageBox::Ok);
+        A.write_to_arduino("0");
+
     }
     else {
         QMessageBox::information(nullptr, QObject::tr("Valide"),
                                  QObject::tr("CIN et mot de passe corrects : accès valide.\n"
                                              "Cliquez sur Annuler pour quitter."), QMessageBox::Cancel);
+        A.write_to_arduino("1");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         // Ouvrir la fenêtre principale
         ma = new employeeUI(this);
@@ -145,7 +288,7 @@ void login::on_verifier_clicked()
 }
 
 
-void login::update_label(){
+/*void login::update_label(){
 
     data= A.read_from_arduino();
 
@@ -157,10 +300,60 @@ void login::update_label(){
     q.first();
     if (q.value(5).toString()!= ""){
     ui->line_cin->setText(q.value(5).toString());
-        ui->line_mdp->setText(q.value(13).toString());}
+        ui->line_mdp->setText(q.value(13).toString());
+    QMessageBox::information(nullptr, QObject::tr("Valide"),
+                             QObject::tr("Emoloyee trouvé\n"
+                                         "Cliquez sur Annuler pour quitter."), QMessageBox::Cancel);
+
+
+    }
+    else {    QMessageBox::critical(nullptr, QObject::tr("non validé"),
+                                 QObject::tr("Emoloyee non trouvé\n"
+                                             "Cliquez sur Annuler pour quitter."), QMessageBox::Cancel); }
 
 
 
+}
+*/
+
+void login::update_label() {
+    // Lire les données reçues de l'Arduino
+    data = A.read_from_arduino();
+
+    // Créer et préparer la requête SQL pour rechercher l'employé en fonction du badge
+    QSqlQuery q;
+    q.prepare("SELECT * FROM employee WHERE badge = :badge");
+    q.bindValue(":badge", data.toInt());
+    qDebug() << data.toInt();
+
+    // Exécuter la requête
+    q.exec();
+
+    // Vérifier si un employé a été trouvé avec le badge scanné
+    if (q.first() && !q.value(5).toString().isEmpty()) {  // q.value(5) correspond au CIN de l'employé
+        // Afficher les informations de l'employé dans les champs correspondants
+        ui->line_cin->setText(q.value(5).toString());  // CIN
+        ui->line_mdp->setText(q.value(13).toString()); // Mot de passe
+
+        // Afficher un message de validation
+        QMessageBox::information(nullptr, QObject::tr("Valide"),
+                                 QObject::tr("Employé trouvé.\n"
+                                             "Accès autorisé."),
+                                 QMessageBox::Cancel);
+
+        // Ouvrir la fenêtre principale de l'employé
+        ma = new employeeUI(this);  // Instancier la fenêtre principale
+        ma->show();  // Afficher la fenêtre
+        this->close();  // Fermer la fenêtre de login
+
+    } else {
+        // Si l'employé n'est pas trouvé, afficher un message d'erreur
+        QMessageBox::critical(nullptr, QObject::tr("Non validé"),
+                              QObject::tr("Employé non trouvé.\n"
+                                          "Accès refusé."),
+                              QMessageBox::Cancel);
+        A.write_to_arduino("0");  // Envoyer un signal à l'Arduino indiquant l'accès refusé
+    }
 }
 
 void login::on_verifier_2_clicked()
@@ -210,4 +403,6 @@ void login::on_verifier_2_clicked()
 
 
 }
+
+
 
