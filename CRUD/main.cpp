@@ -1,42 +1,36 @@
 #include "mainwindow.h"
 #include <QApplication>
 #include <QMessageBox>
-#include "connection.h"
-#include <QDebug>
+#include "Arduino.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
-    MainWindow w;  // Create MainWindow object
-    Connection c;
+    MainWindow w;
 
-    qDebug() << "Attempting to establish a database connection...";
-    bool test = c.createconnect();  // Try to create the connection
+    // Create Arduino object
+    Arduino arduino;
 
-    if (test)
-    {
-        // Database connection was successful
-        w.show();  // Show MainWindow
+    // Initialize the database connection
+    if (arduino.initializeDatabaseConnection()) {
+        qDebug() << "Database connection successful.";
 
-        qDebug() << "Connection successful.";
+        // Show the main window
+        w.show();
 
-        // Show a message box indicating successful connection
-        QMessageBox::information(nullptr, QObject::tr("Database is open"),
-                    QObject::tr("Connection successful.\n"
-                                "Click Cancel to exit."), QMessageBox::Cancel);
+        // Optionally show system tray notification for low stock (existing function in MainWindow)
+        w.showNotification();
 
-        // Debugging to check if showNotification is being called
-        qDebug() << "Calling showNotification...";
-        w.showNotification();  // Call showNotification to display the products in shortage (<= 20 in quantity)
+        // Open serial port and start reading
+        arduino.openSerialPort();
 
-    }
-    else
-    {
-        // Connection failed
-        qDebug() << "Connection failed.";
-        QMessageBox::critical(nullptr, QObject::tr("Database is not open"),
-                    QObject::tr("Connection failed.\n"
-                                "Click Cancel to exit."), QMessageBox::Cancel);
+    } else {
+        // Handle database connection failure
+        qDebug() << "Database connection failed.";
+        QMessageBox::critical(nullptr, QObject::tr("Database Connection Error"),
+                              QObject::tr("Failed to connect to the database.\n"
+                                          "Please check the connection settings and try again."),
+                              QMessageBox::Cancel);
+        return -1;  // Exit the application if the connection fails
     }
 
     return a.exec();

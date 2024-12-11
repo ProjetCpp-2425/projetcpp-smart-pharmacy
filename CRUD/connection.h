@@ -4,7 +4,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 
-
+#include <QString>
 class Connection
 {
     QSqlDatabase db;
@@ -12,6 +12,7 @@ public:
     Connection();
     bool createconnect();
     void closeConnect();
+    QString checkCodeInDatabase(const QString &code);
 };
 
 #endif //

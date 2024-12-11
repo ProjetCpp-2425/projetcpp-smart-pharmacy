@@ -22,3 +22,24 @@ test=true;
     return  test;
 }
 void Connection::closeConnect (){db.close();}
+
+QString Connection::checkCodeInDatabase(const QString &code) {
+    QSqlQuery query;
+    query.prepare("SELECT NOM FROM \"PROJETCPP2A32\".\"EMPLOYÉS\" WHERE MPD = :code");
+    query.bindValue(":code", code);
+
+    if (query.exec()) {
+        if (query.next()) {
+            // Code exists in the database, return the employee name
+            return query.value("NOM").toString();
+        } else {
+            // Code does not exist in the database
+            return "Unknown";
+        }
+    } else {
+        // Query execution failed
+        return "Error executing query";
+    }
+}
+
+

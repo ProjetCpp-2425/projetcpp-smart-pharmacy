@@ -621,4 +621,3 @@ bool MainWindow::sendEmail(const QString &recipient, const QString &subject, con
         return false;
     }
 }
-
