@@ -1,8 +1,6 @@
 #include "fournisseurs.h"
 #include "qitemselectionmodel.h"
-#include "mainwindow.h"
 #include <QSqlError>
-#include "ui_mainwindow.h"
 #include <QTableView>
 #include <QSqlQuery>
 #include <QMessageBox>
@@ -15,7 +13,12 @@
 
 fournisseurs::fournisseurs()
 {
-
+    this->codef=0;
+    this->numerof=0;
+    this->nomf="";
+    this->rs="";
+    this->email="";
+    this->produit="";
 }
 
 fournisseurs::fournisseurs(int codef,int numerof, QString nomf, QString email, QString rs,QString produit)
@@ -59,38 +62,38 @@ QString fournisseurs::getprd()
 //sett
 void fournisseurs::setcodef(int codef)
 {
-    codef=codef;
+     this->codef=codef;
 }
 
 void fournisseurs::setnumerof(int numerof)
 {
-    numerof=numerof;
+     this->numerof=numerof;
 }
 
 void fournisseurs::setnomf(QString nomf)
 {
-    nomf = nomf;
+     this->nomf = nomf;
 }
 
 void fournisseurs::setrs(QString rs)
 {
-    rs = rs;
+     this->rs = rs;
 }
 
 void fournisseurs::setmail(QString email)
 {
-    email=email;
+     this->email=email;
 }
 
 void fournisseurs::setproduit(QString produit)
 {
-    produit=produit;
+    this->produit=produit;
 }
 
 QSqlQueryModel * fournisseurs::afficherfour()
 {
     QSqlQueryModel * model = new QSqlQueryModel();
-    model->setQuery("select * from fournisseurs");
+    model->setQuery("select * from fournisseur");
     model->setHeaderData(0,Qt::Horizontal,QObject::tr("CODE"));
     model->setHeaderData(1,Qt::Horizontal,QObject::tr("NOM"));
     model->setHeaderData(2,Qt::Horizontal,QObject::tr("EMAIL"));
@@ -101,15 +104,24 @@ QSqlQueryModel * fournisseurs::afficherfour()
     return model;
 }
 
+
+
+
 bool fournisseurs::suppfour(int codef)
 {
     QSqlQuery query;
     QString res=QString::number(codef);
-    query.prepare("Delete from fournisseurs where codef=codef");
+
+    query.prepare("Delete from fournisseur where codef=codef");
     query.bindValue(":codef",res);
 
     return query.exec(); //envoie la requete à l'execu
 }
+
+
+
+
+
 
  bool fournisseurs::ajouterfour()
  {
@@ -117,7 +129,7 @@ bool fournisseurs::suppfour(int codef)
      QString res = QString::number(codef);
      QString res1= QString::number(numerof);
 
-     query.prepare("insert into fournisseurs(codef,nomf,email,numerof,rs,produit)""values(:codef, :nomf, :email, :numerof, :rs,:produit)");
+     query.prepare("insert into fournisseur(codef,nomf,email,numerof,rs,produit)""values(:codef, :nomf, :email, :numerof, :rs,:produit)");
 
      //affect
      query.bindValue(":codef",codef);
@@ -132,29 +144,16 @@ bool fournisseurs::suppfour(int codef)
 
  bool fournisseurs::modifier(int codef, int numerof,  QString nomf,  QString email,  QString rs, QString produit)
 {
-
-     Ui::MainWindow *ui = nullptr;
-     QItemSelectionModel *select=ui->tableView->selectionModel();
-     if (!select)
-     {
-         QMessageBox::information(nullptr, QObject::tr("NOT OK"),
-                                  QObject::tr("Attention"
-                                              "selectionner un fournisseur."), QMessageBox::Cancel);
-     }
-
      QSqlQuery query;
-     //prepare la req*/
-     query.prepare("UPDATE fournisseurs SET numerof = :numerof, nomf = :nomf, email = :email, rs = :rs, produit = :produit WHERE codef = :codef");
+         query.prepare("UPDATE fournisseur SET nomf = :nomf, email = :email, rs = :rs, produit = :produit, numerof = :numerof WHERE codef = :codef");
+         query.bindValue(":nomf", nomf);
+         query.bindValue(":email", email);
+         query.bindValue(":rs", rs);
+         query.bindValue(":produit", produit);
+         query.bindValue(":numerof", numerof);
+         query.bindValue(":codef", codef);
 
-     //update
-     query.bindValue(":numerof", numerof);
-     query.bindValue(":codef", codef);
-     query.bindValue(":nomf", nomf);
-     query.bindValue(":email", email);
-     query.bindValue(":rs", rs);
-     query.bindValue(":produit", produit);
-
-     return query.exec();
+         return query.exec();
  }
 
 
