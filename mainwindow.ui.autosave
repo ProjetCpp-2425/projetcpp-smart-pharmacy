@@ -180,7 +180,7 @@ color: rgb(0, 0, 0);</string>
           </rect>
          </property>
          <property name="currentIndex">
-          <number>3</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="PageCommande">
           <widget class="QScrollArea" name="scrollArea">
@@ -232,7 +232,7 @@ color: rgb(0, 0, 0);</string>
                <string notr="true">QTabBar::tab { color: black; }</string>
               </property>
               <property name="currentIndex">
-               <number>0</number>
+               <number>1</number>
               </property>
               <widget class="QWidget" name="tab">
                <attribute name="title">

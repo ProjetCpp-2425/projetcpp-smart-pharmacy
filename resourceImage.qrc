@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/imagesCommande">
+        <file>pharma.png</file>
+    </qresource>
+</RCC>
